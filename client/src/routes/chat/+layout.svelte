@@ -3,15 +3,19 @@
   import Sidebar from "./Sidebar.svelte";
 </script>
 
-<!-- Full-height two-column layout -->
-<div class="flex h-[90svh]">
+<!-- This sits inside the root layout's <main> -->
+<div class="flex h-full overflow-hidden">
   <!-- Left: sidebar -->
-  <aside class="w-64 shrink-0 border-r bg-background">
+  <aside class="w-64 shrink-0 border-r bg-background h-full overflow-y-auto">
     <Sidebar />
   </aside>
 
-  <!-- Right: current /chat page -->
-  <main class="flex-1 min-w-0 flex flex-col">
+  <!-- Right: route content (chat) -->
+  <main class="flex-1 min-w-0 flex flex-col overflow-hidden">
     <slot />
   </main>
+
+   <!-- <aside class="w-64 shrink-0 border-r bg-background h-full overflow-y-auto">
+    <Sidebar />
+  </aside> -->
 </div>

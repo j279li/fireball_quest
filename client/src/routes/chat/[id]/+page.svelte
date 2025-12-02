@@ -2,10 +2,10 @@
   import { PUBLIC_BACKEND_BASE } from "$env/static/public";
   import Button from "$lib/components/ui/button/button.svelte";
   import Input from "$lib/components/ui/input/input.svelte";
-  import MessageItem from "./MessageItem.svelte";
+  import MessageItem from "../MessageItem.svelte";
   import { onMount, onDestroy, tick } from "svelte";
+  import { page } from "$app/stores";
 
-  // message shape from backend
   type WireMsg = {
     username: string;
     message: string | { message: string; tag?: string };
@@ -29,7 +29,6 @@
 
   let text = $state("");
 
-  // toolbar state
   type Tool = "image" | "note" | "roll" | "ooc" | "action" | null;
   let activeTool: Tool = $state(null);
 
@@ -51,29 +50,45 @@
     return "Type a message...";
   }
 
-  // decode server responses that may echo JSON as string
   function decodeIncoming(raw: WireMsg) {
     if (typeof raw.message === "object")
       return { text: raw.message.message, tag: raw.message.tag ?? raw.tag };
 
-    const s = raw.message as string;
     try {
-      const parsed = JSON.parse(s);
-      if (parsed && typeof parsed === "object" && "message" in parsed)
+      const parsed = JSON.parse(raw.message as string);
+      if (parsed && typeof parsed === "object")
         return { text: parsed.message, tag: parsed.tag ?? raw.tag };
-    } catch {}
-    return { text: s, tag: raw.tag };
+    } catch {
+      // ignore JSON parse errors, treat as plain text
+    }
+
+    return { text: raw.message as string, tag: raw.tag };
   }
 
   onMount(() => {
+    const token = localStorage.getItem("token");
+    const chatId = $page.params.id; // ← get "1" from /chat/1
+
     ws = new WebSocket(
       PUBLIC_BACKEND_BASE.replace(/^http/, "ws") +
-        "/chat/test?token=" +
-        localStorage.getItem("token")
+        "/chat/" + chatId + "?token=" +
+        token
     );
 
+    ws.onopen = () => {
+      console.log("WS connected");
+    };
+
+    ws.onerror = (e) => {
+      console.error("WebSocket error:", e);
+    };
+
+    ws.onclose = (e) => {
+      console.warn("WebSocket closed:", e.code, e.reason);
+    };
+
     ws.onmessage = (e) => {
-      const raw: WireMsg = JSON.parse(e.data);
+      const raw = JSON.parse(e.data) as WireMsg;
       const { text, tag } = decodeIncoming(raw);
 
       messages = [
@@ -83,12 +98,10 @@
           message: text,
           avatarUrl: raw.avatarUrl,
           tag,
-          ts: raw.ts ?? Date.now(),
-        },
+          ts: raw.ts ?? Date.now()
+        }
       ];
     };
-
-    ws.onerror = () => console.error("WebSocket error");
   });
 
   onDestroy(() => {
@@ -102,7 +115,7 @@
     text = "";
   }
 
-  // auto-scroll to bottom
+  // auto-scroll to latest
   $effect(() => {
     void messages.length;
     tick().then(() => {
@@ -111,12 +124,19 @@
   });
 </script>
 
-<div class="flex flex-col flex-1 p-6">
-  <h1 class="text-2xl font-semibold mb-4">Global Chat</h1>
+<!-- PAGE ROOT: fills area, allows children to shrink -->
+<div class="flex flex-col flex-1 min-h-0">
+  <h1 class="text-2xl font-semibold mb-4 px-6 pt-6">
+    Global Chat
+  </h1>
 
-  <div class="flex flex-col gap-3 flex-1">
-    <!-- Messages -->
-    <div bind:this={scroller} class="flex-1 overflow-y-auto rounded-lg border bg-muted/30 p-4">
+  <!-- Content block: shrinks, ONLY messages scroll -->
+  <div class="flex flex-col flex-1 min-h-0 px-6 pb-6 gap-3">
+    <!-- Messages: THIS is the ONLY scrollable element -->
+    <div
+      bind:this={scroller}
+      class="flex-1 min-h-0 overflow-y-auto rounded-lg border bg-muted/30 p-4"
+    >
       <ul class="space-y-4">
         {#each messages as m (m.ts + m.username + m.message)}
           <MessageItem {...m} />
@@ -125,8 +145,11 @@
     </div>
 
     <!-- Composer -->
-    <form class="flex items-center gap-2 shrink-0" on:submit|preventDefault={sendMessage}>
-      <!-- Toolbar -->
+    <form
+      class="flex items-center gap-2 shrink-0"
+      on:submit|preventDefault={sendMessage}
+    >
+      <!-- TOOLBAR -->
       <div class="flex items-center gap-2 pr-2">
         <button
           type="button"
@@ -137,7 +160,9 @@
                    ? 'bg-primary text-primary-foreground border-primary'
                    : 'bg-transparent text-muted-foreground hover:bg-accent'}"
           title="Image"
-        >🖼️</button>
+        >
+          🖼️
+        </button>
 
         <button
           type="button"
@@ -148,7 +173,9 @@
                    ? 'bg-primary text-primary-foreground border-primary'
                    : 'bg-transparent text-muted-foreground hover:bg-accent'}"
           title="Note"
-        >📄</button>
+        >
+          📄
+        </button>
 
         <button
           type="button"
@@ -159,7 +186,9 @@
                    ? 'bg-primary text-primary-foreground border-primary'
                    : 'bg-transparent text-muted-foreground hover:bg-accent'}"
           title="Roll"
-        >🎲</button>
+        >
+          🎲
+        </button>
 
         <button
           type="button"
@@ -170,7 +199,9 @@
                    ? 'bg-primary text-primary-foreground border-primary'
                    : 'bg-transparent text-muted-foreground hover:bg-accent'}"
           title="Out of Character"
-        >OOC</button>
+        >
+          OOC
+        </button>
 
         <button
           type="button"

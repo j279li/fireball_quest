@@ -36,7 +36,7 @@
     <div class="flex items-center gap-2">
       <span class="font-semibold text-sm text-foreground">{username}</span>
       <span class="text-xs text-muted-foreground">{timeStr}</span>
-      {#if tag}
+      {#if tag && tag != "chat"}
         <Badge variant="secondary" class="px-2 py-0 h-5 text-[11px]">{tag}</Badge>
       {/if}
     </div>
