@@ -306,9 +306,7 @@
                   {/if}
                 </CardHeader>
 
-                <CardContent class="space-y-3 text-sm text-slate-200">
-                  <p class="text-sm text-slate-300">{c.description ?? 'No description'}</p>
-                </CardContent>
+                <!-- Description shown in header; avoid duplicating it here -->
 
                 <CardFooter class="mt-auto pt-2">
                   <button
