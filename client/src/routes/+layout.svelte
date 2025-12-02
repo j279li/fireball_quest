@@ -11,11 +11,35 @@
 
   // Get username from token on mount
   onMount(() => {
-    // no-op for now
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded: any = jwtDecode(token);
+        const name = decoded?.username ?? decoded?.sub ?? decoded?.name ?? null;
+        username.set(name);
+      } catch (e) {
+        username.set(null);
+      }
+    } else {
+      username.set(null);
+    }
   });
 
   function handleStorage(e: StorageEvent) {
-    return;
+    if (e.key === 'token') {
+      const token = e.newValue;
+      if (token) {
+        try {
+          const decoded: any = jwtDecode(token);
+          const name = decoded?.username ?? decoded?.sub ?? decoded?.name ?? null;
+          username.set(name);
+        } catch {
+          username.set(null);
+        }
+      } else {
+        username.set(null);
+      }
+    }
   }
 
   onMount(() => {

@@ -278,7 +278,7 @@
             class="inline-flex items-center gap-2 rounded-md border border-slate-600 px-3 py-2 text-sm font-medium text-slate-300 bg-transparent hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             on:click={openCampaignSelector}
           >
-            {allCampaigns.length > 1 ? "Switch" : "Create"} Campaign
+            {allCampaigns.length > 1 ? "Select" : "Create"} Campaign
           </button>
         </div>
       </header>
@@ -340,7 +340,7 @@
           <h1 class="text-3xl font-semibold tracking-tight text-slate-50">Fireball.quest</h1>
           <p class="text-sm text-slate-300">Your Campaigns</p>
         </div>
-        <Button on:click={openCampaignSelector} variant="outline" class="border-sky-500/70 text-sky-300">Switch Campaign</Button>
+        <Button on:click={openCampaignSelector} variant="outline" class="border-sky-500/70 text-sky-300">Select Campaign</Button>
       </header>
 
       <div class="grid gap-6 md:grid-cols-2">
