@@ -33,7 +33,7 @@
 
   let campaignName: string | null = null;
 
-  // Fetch campaign name for current chat (param may be a campaign id or a session id)
+  // Fetch campaign name for current chat
   onMount(async () => {
     const id = $page.params.id;
     if (!id) return;
@@ -51,22 +51,6 @@
         if (match) {
           campaignName = match.name ?? null;
           return;
-        }
-      }
-
-      // Fallback: if id is a session id, fetch sessions and resolve its campaign_id
-      const sres = await fetch(`${PUBLIC_BACKEND_BASE}/sessions`, { headers });
-      if (sres.ok) {
-        const sessions = await sres.json();
-        const session = sessions.find((s: any) => String(s.id) === String(id));
-        if (session && session.campaign_id) {
-          // refetch campaigns to find campaign name
-          const r2 = await fetch(`${PUBLIC_BACKEND_BASE}/campaigns`, { headers });
-          if (r2.ok) {
-            const campaigns2 = await r2.json();
-            const match2 = campaigns2.find((c: any) => c.id === session.campaign_id);
-            if (match2) campaignName = match2.name ?? null;
-          }
         }
       }
     } catch (e) {

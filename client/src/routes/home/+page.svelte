@@ -130,7 +130,6 @@
       if (res.ok) {
         const data = await res.json();
         await loadAllCampaigns(token);
-        // sessions are currently not used; open chat per-campaign instead
         
         // Select the newly created campaign
         if (data.campaign_id) {
@@ -162,7 +161,7 @@
     }
   }
 
-  // no sessions: campaigns-only view
+  // campaigns-only view
 
   onMount(async () => {
     const token = localStorage.getItem("token");
@@ -204,23 +203,6 @@
         // No campaigns - open selector so they can create one
         openCampaignSelector();
       }
-    //   // 2) Sessions current user is in
-    //   const sessionsRes = await fetch(`${PUBLIC_BACKEND_BASE}/sessions`, {
-    //     headers: { Authorization: `Bearer ${token}` }
-    //   });
-
-    //   if (sessionsRes.ok) {
-    //     const d = await sessionsRes.json();
-    //     const rawSessions = Array.isArray(d)
-    //       ? d
-    //       : Array.isArray(d.sessions)
-    //       ? d.sessions
-    //       : [];
-    //     sessions = rawSessions.map(normalizeSession);
-    //   } else {
-    //     sessions = [];
-    //   }
-
       // Previously redirected non-GM users straight into chat; removed so
       // everyone stays on the campaigns list by default.
     } catch (err) {
@@ -232,7 +214,7 @@
     }
   });
 
-  // Helper: no session helpers needed in campaign-only view
+  // Helper: campaign-only view
 </script>
 
 <!-- DARK ROOT: high-contrast, readable -->
@@ -263,7 +245,7 @@
           <h1 class="text-3xl font-semibold tracking-tight text-slate-50">
             Fireball.quest
           </h1>
-          <p class="text-sm text-slate-300">Your RPG campaigns and sessions</p>
+          <p class="text-sm text-slate-300">Your RPG campaigns</p>
         </div>
 
         <div class="flex items-center gap-3">
@@ -430,7 +412,7 @@
                   bind:value={newCampaignName}
                   disabled={createCampaignLoading}
                   class="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500"
-                  on:keydown={(e) => {
+                  onkeydown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
                       createCampaign();

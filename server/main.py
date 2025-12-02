@@ -122,21 +122,20 @@ active_connections = defaultdict(set)
 
 @app.websocket("/chat/{chat_id}")
 async def chat(websocket: WebSocket, chat_id: str):
-    # Quick-fix: treat chat_id as a session id and use session-scoped messages.
-    # This avoids requiring a DB migration right now.
-    session_id = int(chat_id)
+    # Chat is now campaign-scoped: chat_id is treated as a campaign id
+    campaign_id = int(chat_id)
     user = await get_current_user(websocket.query_params.get("token"))
     await websocket.accept()
-    active_connections[session_id].add(websocket)
+    active_connections[campaign_id].add(websocket)
     with conn.cursor() as cur:
         cur.execute("""
             SELECT m.content, u.username, m.created_at, m.msg_type
             FROM messages m
             JOIN users u ON u.id = m.user_id
-            WHERE m.session_id = %s
+            WHERE m.campaign_id = %s
             ORDER BY m.created_at ASC
             LIMIT 50
-        """, (session_id,))
+        """, (campaign_id,))
         history = cur.fetchall()
 
     for content, username, created_at, msg_type in history:
@@ -154,17 +153,17 @@ async def chat(websocket: WebSocket, chat_id: str):
             text = (data.get("message") or "").strip()
             msg_type = data.get("tag") or "chat"
 
-            # Store message associated with session
+            # Store message associated with campaign
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO messages (session_id, user_id, content, msg_type)
+                    INSERT INTO messages (campaign_id, user_id, content, msg_type)
                     VALUES (%s, %s, %s, %s)
                     RETURNING id, created_at
-                """, (session_id, user["id"], text, msg_type))
+                """, (campaign_id, user["id"], text, msg_type))
                 msg_id, created_at = cur.fetchone()
             conn.commit()
             
-            for connection in active_connections[session_id]:
+            for connection in active_connections[campaign_id]:
                 await connection.send_json({
                     "message": text,
                     "username": user["username"],
@@ -172,7 +171,7 @@ async def chat(websocket: WebSocket, chat_id: str):
                     "ts": created_at.isoformat()
                 })
     except WebSocketDisconnect:
-        active_connections[session_id].remove(websocket)
+        active_connections[campaign_id].remove(websocket)
 
 @app.get("/campaign/{campaign_id}/members")
 async def list_campaign_members(campaign_id: int):
@@ -297,75 +296,16 @@ async def create_campaign(
             detail="internal_error"
         )
 
-@app.get("/sessions")
-async def get_user_sessions(
-    current_user: Annotated[dict, Depends(get_current_user_dep)]
-):
-    """
-    Return all sessions for campaigns the current user is part of
-    (either campaign owner or in campaign_memberships).
-    """
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT DISTINCT
-                s.id,
-                s.campaign_id,
-                s.name,
-                s.scheduled_at,
-                s.started_at,
-                s.ended_at,
-                s.created_at,
-                s.description
-            FROM sessions s
-            JOIN campaigns c
-            ON c.id = s.campaign_id
-            LEFT JOIN campaign_memberships cm
-            ON cm.campaign_id = c.id
-            WHERE cm.user_id = %s
-            OR c.owner_user_id = %s
-            ORDER BY
-                s.scheduled_at NULLS LAST,
-                s.created_at ASC
-            """,
-            (current_user["id"], current_user["id"]),
-        )
-        rows = cur.fetchall()
-
-    sessions = [
-        {
-            "id": row[0],
-            "campaign_id": row[1],
-            "name": row[2],
-            "scheduled_at": row[3].isoformat() if row[3] else None,
-            "started_at":   row[4].isoformat() if row[4] else None,
-            "ended_at":     row[5].isoformat() if row[5] else None,
-            "created_at":   row[6].isoformat() if row[6] else None,
-            "description":  row[7],
-        }
-        for row in rows
-    ]
-
-    return sessions
-
 @app.post("/campaigns/{campaign_id}/invite/{username}")
 async def invite_to_campaign(campaign_id: int, username: str):
     with conn.cursor() as cur:
-        # If the provided id refers to a campaign, use it. If not, allow a
-        # session id to be passed (chat pages sometimes use session ids) and
-        # resolve it to the parent campaign.
+        # Ensure campaign exists
         cur.execute("SELECT id FROM campaigns WHERE id = %s", (campaign_id,))
         if cur.fetchone() is None:
-            # try treating campaign_id as a session id
-            cur.execute("SELECT campaign_id FROM sessions WHERE id = %s", (campaign_id,))
-            row = cur.fetchone()
-            if row is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Campaign not found"
-                )
-            campaign_id = row[0]
-
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Campaign not found"
+            )
         # 1. Look up user by username
         cur.execute(
             "SELECT id FROM users WHERE username = %s",
@@ -399,21 +339,16 @@ async def invite_to_campaign(campaign_id: int, username: str):
 async def add_campaign_member(campaign_id: int, payload: AddMemberPayload):
     """
     Add a member to a campaign by username. Accepts JSON { "username": "..." }.
-    If `campaign_id` refers to a session id, resolve its parent campaign.
     """
     username = payload.username
     with conn.cursor() as cur:
-        # Resolve campaign id if a session id was provided
+        # Ensure campaign exists
         cur.execute("SELECT id FROM campaigns WHERE id = %s", (campaign_id,))
         if cur.fetchone() is None:
-            cur.execute("SELECT campaign_id FROM sessions WHERE id = %s", (campaign_id,))
-            row = cur.fetchone()
-            if row is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Campaign not found"
-                )
-            campaign_id = row[0]
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Campaign not found"
+            )
 
         # Look up user by username
         cur.execute("SELECT id FROM users WHERE username = %s", (username,))
@@ -437,36 +372,6 @@ async def add_campaign_member(campaign_id: int, payload: AddMemberPayload):
 
     conn.commit()
     return {"status": "ok"}
-
-@app.post("/sessions")
-async def create_session(payload: dict):
-    try:
-        campaign_id = payload["campaign_id"]
-        name = payload["name"]
-        scheduled_at = payload.get("scheduled_at", None)
-
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO sessions (campaign_id, name, scheduled_at)
-                VALUES (%s, %s, %s)
-                RETURNING id;
-                """,
-                (campaign_id, name, scheduled_at),
-            )
-            session_id = cur.fetchone()[0]
-
-        conn.commit()
-
-    except Exception as e:
-        conn.rollback()
-        print("create_session error:", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="internal_error",
-        )
-
-    return {"status": "success", "session_id": session_id}
 
 @app.post("/signup")
 async def signup(payload: SignupPayload):
