@@ -1,7 +1,7 @@
-// import { redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 
-// // REDIRECT UNKNOWN PATHS TO /home
-
-// export function load() {
-//     throw redirect(307, '/home'); // Temporary redirect to home
-// }
+// Redirect unknown paths to /home to avoid SvelteKit trying to render
+// a missing +page.svelte for the catchall route (useful for dev).
+export function load() {
+	throw redirect(307, '/home');
+}
