@@ -4,6 +4,8 @@
   import { Button } from "$lib/components/ui/button";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
+  import { PUBLIC_BACKEND_BASE } from "$env/static/public";
 
   import SidebarCharacter from "./SidebarCharacter.svelte";
   import SidebarSpells from "./SidebarSpells.svelte";
@@ -28,6 +30,49 @@
   }
 
   const isActive = (id: string) => active === id;
+
+  let campaignName: string | null = null;
+
+  // Fetch campaign name for current chat (param may be a campaign id or a session id)
+  onMount(async () => {
+    const id = $page.params.id;
+    if (!id) return;
+    const token = localStorage.getItem("token");
+
+    try {
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      // Try fetching campaigns the user has access to and match by id
+      const res = await fetch(`${PUBLIC_BACKEND_BASE}/campaigns`, { headers });
+      if (res.ok) {
+        const campaigns = await res.json();
+        const match = campaigns.find((c: any) => String(c.id) === String(id));
+        if (match) {
+          campaignName = match.name ?? null;
+          return;
+        }
+      }
+
+      // Fallback: if id is a session id, fetch sessions and resolve its campaign_id
+      const sres = await fetch(`${PUBLIC_BACKEND_BASE}/sessions`, { headers });
+      if (sres.ok) {
+        const sessions = await sres.json();
+        const session = sessions.find((s: any) => String(s.id) === String(id));
+        if (session && session.campaign_id) {
+          // refetch campaigns to find campaign name
+          const r2 = await fetch(`${PUBLIC_BACKEND_BASE}/campaigns`, { headers });
+          if (r2.ok) {
+            const campaigns2 = await r2.json();
+            const match2 = campaigns2.find((c: any) => c.id === session.campaign_id);
+            if (match2) campaignName = match2.name ?? null;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load campaign name for sidebar', e);
+    }
+  });
 </script>
 
 <div class="flex h-full flex-col">
@@ -37,8 +82,7 @@
       ← <span>Back to Home</span>
     </a>
     <h1 class="mt-3 text-lg font-semibold leading-tight">
-      Campaign Name
-      <span class="block text-sm font-normal text-muted-foreground">Session 1</span>
+      {campaignName ?? 'Campaign'}
     </h1>
     <div class="mt-2 flex items-center gap-2">
       <span class="h-2.5 w-2.5 rounded-full bg-green-500"></span>

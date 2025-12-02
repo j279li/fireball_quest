@@ -236,7 +236,7 @@
   <h1 class="text-2xl font-semibold mb-4 px-6 pt-6">
     Global Chat
   </h1>
-  <div class="px-6 mb-4 flex items-center gap-3">
+  <div class="px-6 mb-4 flex items-center gap-3 h-12 min-h-12 shrink-0">
     <!-- Hide/show OOC messages toggle beside invite -->
     <button
       type="button"
@@ -252,10 +252,10 @@
       <button
         id="invite-btn"
         type="button"
-        class="inline-flex items-center gap-2 rounded-md border border-slate-600 px-3 py-1 text-sm font-medium text-slate-300 bg-transparent hover:bg-slate-800"
+        class="h-8 inline-flex items-center gap-2 rounded-md border border-slate-600 px-3 text-sm font-medium text-slate-300 bg-transparent hover:bg-slate-800 justify-center"
         onclick={() => { console.log('Invite button clicked'); openInviteModal(); }}
       >
-        <UserPlus class="w-4 h-4" />
+        <UserPlus class="w-4 h-4 text-white" />
         <span>Invite Player</span>
       </button>
     {:else}
@@ -264,7 +264,8 @@
           bind:value={inviteUsername}
           placeholder="Player username"
           disabled={inviteLoading}
-          class="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500"
+          height="h-7"
+          class="h-7 py-1 text-sm border-slate-700 text-slate-50 placeholder-white"
           onkeydown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -279,7 +280,7 @@
 
         <button
           type="button"
-          class="px-3 py-1 rounded-md bg-sky-600 hover:bg-sky-500 text-slate-50"
+          class="h-8 inline-flex items-center px-3 text-sm rounded-md bg-sky-600 hover:bg-sky-500 text-slate-50 justify-center"
           onclick={invitePlayer}
           disabled={inviteLoading}
         >
@@ -292,7 +293,7 @@
 
         <button
           type="button"
-          class="px-3 py-1 rounded-md border border-slate-600 text-slate-400 hover:bg-slate-800"
+          class="h-8 inline-flex items-center px-3 text-sm rounded-md border border-slate-600 text-slate-400 hover:bg-slate-800 justify-center"
           onclick={closeInviteModal}
           disabled={inviteLoading}
         >

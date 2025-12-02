@@ -263,13 +263,7 @@
           <h1 class="text-3xl font-semibold tracking-tight text-slate-50">
             Fireball.quest
           </h1>
-          <p class="text-sm text-slate-300">
-            {#if currentCampaignId}
-              {allCampaigns.find(c => c.id === currentCampaignId)?.name ?? "Your RPG campaigns and sessions"}
-            {:else}
-              Your RPG campaigns and sessions
-            {/if}
-          </p>
+          <p class="text-sm text-slate-300">Your RPG campaigns and sessions</p>
         </div>
 
         <div class="flex items-center gap-3">
