@@ -43,6 +43,7 @@
 
   type Tool = "image" | "note" | "roll" | "ooc" | "action" | null;
   let activeTool: Tool = $state(null);
+  let hideOOC = $state(false);
 
   function toggleTool(t: Exclude<Tool, null>) {
     activeTool = activeTool === t ? null : t;
@@ -58,8 +59,8 @@
   function toolPlaceholder(t: Tool) {
     if (t === "action") return "Send battle message...";
     if (t === "ooc") return "Send OOC message...";
-    if (t === "roll") return "Type roll command (e.g., 1d20+2)...";
-    return "Type a message...";
+    if (t === "roll") return "Type roll command (coming soon)...";
+    return "Coming soon...";
   }
 
   function decodeIncoming(raw: WireMsg) {
@@ -139,8 +140,8 @@
     }
   });
 
-  function sendMessage(e) {
-    e.preventDefault();
+  function sendMessage(e?: Event) {
+    try { e?.preventDefault?.(); } catch {}
     const payload = text.trim();
     if (!payload || ws?.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ message: payload, tag: toolToTag(activeTool) }));
@@ -227,6 +228,7 @@
       if (scroller) scroller.scrollTop = scroller.scrollHeight;
     });
   });
+
 </script>
 
 <!-- PAGE ROOT: fills area, allows children to shrink -->
@@ -234,7 +236,18 @@
   <h1 class="text-2xl font-semibold mb-4 px-6 pt-6">
     Global Chat
   </h1>
-  <div class="px-6 mb-4">
+  <div class="px-6 mb-4 flex items-center gap-3">
+    <!-- Hide/show OOC messages toggle beside invite -->
+    <button
+      type="button"
+      class="inline-flex items-center gap-2 rounded-md border border-slate-600 px-3 py-1 text-sm font-medium text-slate-300 bg-transparent hover:bg-slate-800"
+      aria-pressed={hideOOC}
+      onclick={() => (hideOOC = !hideOOC)}
+      title={hideOOC ? 'Show OOC messages' : 'Hide OOC messages'}
+    >
+      {hideOOC ? 'Show OOC' : 'Hide OOC'}
+    </button>
+
     {#if !inviteOpen}
       <button
         id="invite-btn"
@@ -297,7 +310,7 @@
       class="flex-1 min-h-0 overflow-y-auto rounded-lg border bg-muted/30 p-4"
     >
       <ul class="space-y-4">
-        {#each messages as m (m.ts + m.username + m.message)}
+        {#each (hideOOC ? messages.filter(m => m.tag !== 'OOC') : messages) as m (m.ts + m.username + m.message)}
           <MessageItem {...m} />
         {/each}
       </ul>
