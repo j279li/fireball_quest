@@ -9,21 +9,22 @@
   import SidebarSpells from "./SidebarSpells.svelte";
 
   $: url = $page.url;
-  // read selection from query param; default to character
-  $: active = (url.searchParams.get("panel") ?? "character") as "character" | "spells" | "items" | "notes";
+  // read selection from query param; default to notes
+  $: active = (url.searchParams.get("panel") ?? "notes") as "character" | "spells" | "items" | "notes";
 
-  const links = [
-    { id: "character", label: "Character", icon: "👤" },
-    { id: "spells",    label: "Spells",    icon: "⚡" },
+  type Link = { id: "character" | "spells" | "items" | "notes"; label: string; icon: string; disabled?: boolean };
+  const links: Link[] = [
+    { id: "character", label: "Character", icon: "👤", disabled: true },
+    { id: "spells",    label: "Spells",    icon: "⚡", disabled: true },
     { id: "items",     label: "Items",     icon: "📦" },
     { id: "notes",     label: "Notes",     icon: "📝" },
-  ] as const;
+  ];
 
   function setPanel(id: typeof links[number]["id"]) {
     // update URL without full reload or scroll jump; keeps back/forward history tidy
     const next = new URL(url);
     next.searchParams.set("panel", id);
-    goto(next, { replaceState: false, noScroll: true, keepfocus: true });
+    goto(next, { replaceState: false, noScroll: true, keepFocus: true });
   }
 
   const isActive = (id: string) => active === id;
@@ -54,14 +55,16 @@
       {#each links as link}
         <button
           type="button"
-          on:click={() => setPanel(link.id)}
+          on:click={() => !link.disabled && setPanel(link.id)}
+          disabled={link.disabled}
           class={`w-full text-left flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium
                   ${isActive(link.id)
                     ? "bg-accent text-accent-foreground shadow-sm"
-                    : "text-foreground/90 hover:bg-accent hover:text-accent-foreground"}`}
+                    : "text-foreground/90 hover:bg-accent hover:text-accent-foreground"}
+                  ${link.disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
         >
           <span>{link.icon}</span>
-          <span>{link.label}</span>
+          <span>{link.label}{link.disabled ? ' (WIP)' : ''}</span>
         </button>
       {/each}
     </nav>
