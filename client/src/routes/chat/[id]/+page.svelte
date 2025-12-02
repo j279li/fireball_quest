@@ -265,7 +265,7 @@
           placeholder="Player username"
           disabled={inviteLoading}
           height="h-7"
-          class="h-7 py-1 text-sm border-slate-700 text-slate-50 placeholder-white"
+          class="h-7 py-1 text-sm border-slate-700"
           onkeydown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
