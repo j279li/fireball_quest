@@ -1,6 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from typing import Annotated
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
@@ -22,6 +23,13 @@ JWT_EXP_HOURS = int(os.getenv("JWT_EXP_HOURS", "1"))
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 password_hasher = PasswordHasher()
+
+# Pydantic models
+class SignupPayload(BaseModel):
+    email: str
+    username: str
+    display_name: str | None = None
+    password: str
 
 app = FastAPI()
 app.add_middleware(
@@ -321,7 +329,7 @@ async def create_session(payload: dict):
     return {"status": "success", "session_id": session_id}
 
 @app.post("/signup")
-async def signup(payload):
+async def signup(payload: SignupPayload):
     password_hash = password_hasher.hash(payload.password)
 
     try:
